@@ -1,0 +1,46 @@
+---
+title: "2 Rmarkdown Files"
+author: "Andrew Farrey"
+date: "2024-05-13"
+output: html_document
+---
+
+R Markdown files, or .Rmd files, allow you to include text written in Markdown language, which is closer to word processing languages. They are very useful if you want to include text explanations, interpretation, or guidance tables.
+
+In .Rmd files, R code is executed in "chunks," and the rest of the text is treated as Markdown syntax. A chunk called "setup" can be seen below.
+
+The user can set various options within chunks, including how plot or table output renders, whether code is displayed or hidden, and so on.
+
+For our purposes, I will keep echo set to TRUE so the code is rendered alongside any output as this helps with learning. If you want to hide your code and keep the output from the code, change echo = TRUE to echo = FALSE.
+
+If you don't want to bother with raw Markdown syntax, you can click on the gear icon above (which means "settings") and click "Use Visual Editor" or click Control + Shift + F4. Either will refresh your .Rmd file, which will now contail a toolbar similar to a typical Word document or other word processor, which options such as "Format," "Insert," and "Table."
+
+Standard Word shortcuts also apply in a few cases, such as Control + B for bold, Control + I for italics, and Control + U for underline. Thus highlighting "bold" and holding down Control + B gives us "**bold**."
+
+.Rmd files (or Quarto files) can often be more useful than standard R scripts because they are intended to be used as standalone reports. R scripts can generate visuals, tables, and output, but if you want to depict visuals, tables, or other output in a report format, using .Rmd is a good way to go.
+
+I have left the rest of the default R Markdown introduction text below. Click "Knit" above to generate a standalone report and view the output.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

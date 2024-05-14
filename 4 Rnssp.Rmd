@@ -1,0 +1,152 @@
+---
+title: "4 Rnssp"
+author: "Andrew Farrey"
+date: "2024-05-14"
+output: html_document
+---
+
+# Using the Rnssp R Package with NSSP ESSENCE Data
+
+```{r libraries, include=FALSE}
+# Initial setup is the same
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# If you haven't installed the tidyverse and Rnssp, make sure to do so
+# "Uncomment" remove the number sign in front of the below rows to install the relevant packages
+#install.packages("devtools")
+#devtools::install_github("cdcgov/Rnssp")
+#install.packages("tidyverse")
+#install.packages("reactable")
+#install.packages("janitor")
+ 
+library(tidyverse)
+library(Rnssp)
+library(janitor)
+
+
+# Load current favorite table package
+library(reactable)
+
+# Load Example data and standardize column names
+data <- starwars %>% 
+  clean_names()
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r set_dates}
+endDate <- format(Sys.Date() - 4, "%d%b%Y")
+startDate <- format(Sys.Date() - 368, "%d%b%Y")
+```
+
+Accessing NSSP ESSENCE via RStudio requires authenticating your login information. This can be done programmatically or using the Rnssp credentials Addin.
+
+```{r create_credentials}
+#myProfile <- create_profile()
+
+# Once you create a Credentials object, you can save it as .rds or .rda and load it accordingly, so long as it is in the same directory or accessible via filepath
+
+myProfile <- readRDS("myProfile.rds")
+
+# Load .rda credentials example
+# load("myProfile.rda")
+```
+
+## Time Series Data
+
+Once you have generated your credentials object, you can begin to query ESSENCE data.
+
+```{r}
+
+category <- "cdc%20covid-specific%20dd%20v1"
+
+# paste0() allows you to piece together different R objects. In this case, we'll be piecing together the ESSENCE URL string and our date values
+url <-
+  paste0(
+    "https://essence2.syndromicsurveillance.org/nssp_essence/api/timeSeries?datasource=va_er&startDate=",
+    startDate,
+    "&medicalGroupingSystem=essencesyndromes&userId=2765&endDate=",
+    endDate,
+    "&percentParam=noPercent&hospFacilityType=emergency%20care&aqtTarget=TimeSeries&ccddCategory=",
+    category,
+    "&geographySystem=region&detector=probrepswitch&timeResolution=daily&calcPatientClassSource=pv1&hasBeenE=1"
+  )
+
+# This url is from the PatientLocation (Full Details) data source in ESSENCE2, so we can leverage Calculated Patient Class Source to exclude non-ED visit encounters. We call pluck() to pull the JSON out into a usable R data.frame.
+api_data_ts <- get_api_data(url) %>% 
+  pluck("timeSeriesData")
+# or api_data_ts <- myProfile$get_api_data(url)
+
+glimpse(api_data_ts)
+
+# Check total opioid overdose encounters
+sum(api_data_ts$count)
+
+# Compare this against the default CDC ED visit pull, HasBeenE=1 and no Facility_Type filter
+url1 <-
+  paste0(
+    "https://essence2.syndromicsurveillance.org/nssp_essence/api/timeSeries?datasource=va_er&startDate=",
+    startDate,
+    "&medicalGroupingSystem=essencesyndromes&userId=2765&endDate=",
+    endDate,
+    "&percentParam=noPercent&aqtTarget=TimeSeries&ccddCategory=",
+    category,
+    "&geographySystem=region&detector=probrepswitch&timeResolution=daily&hasBeenE=1"
+  )
+
+api_data_ts_nosource <- get_api_data(url1) %>% 
+  pluck("timeSeriesData")
+# or api_data_ts <- myProfile$get_api_data(url)
+
+glimpse(api_data_ts_nosource)
+
+# Check total opioid overdose encounters
+sum(api_data_ts_nosource$count)
+```
+
+## Table Builder
+
+```{r}
+url <- paste0("https://essence2.syndromicsurveillance.org/nssp_essence/api/tableBuilder?datasource=va_er&startDate=",startDate,"&medicalGroupingSystem=essencesyndromes&userId=2765&endDate=",endDate,"&percentParam=noPercent&hospFacilityType=emergency%20care&aqtTarget=TableBuilder&ccddCategory=",category,"&geographySystem=state&detector=probrepswitch&timeResolution=weekly&calcPatientClassSource=pv1&hasBeenE=1&rowFields=timeResolution&columnField=ageNCHS")
+
+# Using the JSON url returns a long data.frame 
+table_builder <- get_api_data(url)
+
+table_data <- table_builder %>% 
+  rename(date = timeResolution) %>% 
+  separate(date, into = c("Year", "Week"), sep = "-", remove = TRUE) %>% 
+  mutate(
+    Year = as.integer(Year),
+    Week = as.integer(Week),
+    date = MMWRweek::MMWRweek2Date(MMWRyear = Year, MMWRweek = Week),
+    ageNCHS = factor(ageNCHS)
+  ) %>% 
+    select(-c(Year, Week))
+
+age_plot <- ggplot(table_data, aes(x = date, y = count, color = ageNCHS)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Date",
+    y = "Count (n)",
+    color = "Age Group",
+    title = "COVID ED Visits by NCHS Age Group"
+  ) +
+  scale_color_discrete(name = "Age Group") +
+  scale_x_date(
+    breaks = "4 weeks",
+  ) +
+  theme_bw() +
+  scale_y_continuous(
+    limits = c(0, NA),
+    expand = expansion(c(0, 0.2)),
+    labels = scales::comma
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+age_plot
+
+# We can make this plot interactive by calling the ggplotly() function from the Plotly library
+plotly::ggplotly(age_plot)
+```

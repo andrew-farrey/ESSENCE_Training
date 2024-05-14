@@ -1,0 +1,22 @@
+---
+title: "Setup"
+author: "Andrew Farrey"
+date: "2024-05-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load ESSENCE Training R Project Directory from Github
+
+You can either:
+
+\- Download the directory as a zipped file and load it into your RStudio environment (click on "code" and "download .ZIP") , then Upload the zipped file to your R files.
+
+\- Copy the https URL address below (or the https link from "Code") then go to File -\> New Project -\> Version Control -\> Git -\> paste the URL -\> Click Create Project
+
+The project URL is: <https://github.com/andrew-farrey/ESSENCE_Training.git>
+
+I'll drop the link in the meeting chat so it is readily accessible.

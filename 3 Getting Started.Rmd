@@ -1,0 +1,194 @@
+---
+title: "3 Getting Started"
+author: "Andrew Farrey"
+date: "2024-05-13"
+output: html_document
+bibliography: references.bib
+---
+
+# Getting Started
+
+We'll begin with loading our required packages, learning a few of the most common functions you'll probably encounter or need when using ESSENCE data, and discussing long, or "tidy" data versus wide data.
+
+## Helpful Things to Know
+
+-   To run R code, either set your cursor to the code you want to run or highlight the code you want to run and press **Control + Enter.**
+
+-   R Markdown files can also run a specific code chunk using the "play" sign in the top right of each chunk. To run all code chunks above the selected chunk, click the triangle with a bar to the left.
+
+-   Columns must be one specific type, which determines the format of the field values in that column. Unless you have a character column,in which case you could represent numbers as character values if desired.
+
+-   **Assignment: to create or build upon existing data in your R environment, you must assign code to a string value of your choosing using "\<-" or "-\>" ("=" is also valid, but is frowned upon stylistically). From a stylistic and ease-of-interpretation standpoint, you should always use "\<-."**
+
+    -   e.g. data \<- data %\>% mutate(var = x + 1), NOT data %\>% mutate(var = x + 1) -\> data.. unless you enjoy making your code difficult to follow.
+
+-   The tidyverse relies heavily on a symbol called "the pipe" which originated in the [Magrittr](https://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html) package. The pipe makes R code syntax more legible and understandable for humans.
+
+    -   The pipe is reflected as "%\>%" and has a keyboard shortcut (Control + Shift + M), which I would recommend learning and using ASAP. Base R version 4.1 began including a "native" pipe operator which is denoted as "\|\>." The intro-level differences between them are minimal, but the Magrittr pipe has some advantages and it's comfortable to use, so that's what we're using today.
+    -   The pipe replaces the need to wrap multiple functions around the same data set, allowing you to perform several operations in the same "pipeline." Thus, you can "pipe" several different functions together to obtain a final wrangled value. This is much easier to interpret than the corresponding base R equivalent.
+
+```{r libraries, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# If you haven't installed the tidyverse and Rnssp, make sure to do so
+# "Uncomment" remove the number sign in front of the below rows to install the relevant packages
+#install.packages("devtools")
+#devtools::install_github("cdcgov/Rnssp")
+#install.packages("tidyverse")
+#install.packages("reactable")
+#install.packages("janitor")
+ 
+library(tidyverse)
+library(Rnssp)
+library(janitor)
+
+
+# Load current favorite table package
+library(reactable)
+
+# Load Example data and standardize column names
+data <- starwars %>% 
+  clean_names()
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Common Functions
+
+Most data wrangling functions I use are from the dplyr and tidyr packages [@dplyr; @tidyr]. Most of the Rnssp package runs on common tidyverse functions as well.
+
+| Function                       | Package   | Use                                                                   |
+|--------------------------------|-----------|-----------------------------------------------------------------------|
+| select()                       | dplyr     | select or de-select columns                                           |
+| filter()                       | dplyr     | limit to certain rows based on one or more condition                  |
+| mutate()                       | dplyr     | create new columns                                                    |
+| group_by()                     | dplyr     | group data by column values                                           |
+| summarize()                    | dplyr     | ..summarize column values, often by group                             |
+| ymd(), mdy(), dmy(), as_date() | lubridate | easily parse date fields                                              |
+| ymd_hms()                      | lubridate | easily parse as.POSIXct date time fields                              |
+| floor_date()                   | lubridate | create weekly data                                                    |
+| as.character(), as.integer(),  | base      | change column type                                                    |
+| case_when()                    | dplyr     | create new conditional column                                         |
+| ifelse()                       | base      | create new conditional column                                         |
+| c()                            | base      | create a character vector (typically used to filter or select values) |
+
+```{r functions, echo=TRUE}
+# Select
+data %>% 
+  select(name, height)
+
+# Filter (note "==" is needed to set something as logical "equal to", since "=" is used for assignment)
+data %>% 
+  filter(species == "Human", mass > 75)
+
+# Mutate
+data %>% 
+  mutate(
+    eye_color_category = case_when(
+      eye_color %in% c("black", "brown", "dark", "hazel") ~ "Dark",
+      eye_color %in% c("blue", "blue-gray", "white", "yellow", "red", "pink", "orange", "red, blue", "gold", "green, yellow") ~ "Color",
+      eye_color %in% c("unknown") ~ NA_character_
+    ) 
+  ) %>% 
+  select(name, eye_color_category)
+
+# Group_by & Summarize
+data %>% 
+  group_by(species) %>% 
+  summarize(mean_height = mean(height))
+
+```
+
+## Wide vs. Long Data
+
+The main difference between data in R and human-legible data (e.g., Excel data) is the format.
+
+Data is analyzed in R in long format, which is also called "tidy" data.
+
+For data to be tidy, it must follow the three rules below:
+
+1.  Each variable is a column; each column is a variable.
+
+2.  Each observation is a row; each row is an observation.
+
+3.  Each value is a cell; each cell is a single value.[^1]
+
+[^1]: Wickham, H., Çetinkaya-Rundel, M., & Grolemund, G. (2023). *R for data science*. O'Reilly Media, Incorporated.
+
+Data can be readily reformatted using tidyr functions such is pivot_wider and pivot_longer.
+
+If you select the JSON option when generating ESSENCE APIs, you will **always** get long data back and prevent the need to perform any pivoting.
+
+The Star Wars data set is already in long format, however, the relig_income data set represents a good pivot_longer() example.
+
+pivot_longer() needs the following values:
+
+-   cols = columns to reshape
+
+-   names_to = name of the field that will be created from the column names
+
+-   values to = name of the field that will be created from the selected cell value
+
+```{r long, echo=TRUE}
+# Pivot_wider/Pivot_longer code examples borrowed from R for Data Science
+# Wickham, H., Çetinkaya-Rundel, M., & Grolemund, G. (2023). R for data science. O’Reilly Media, Incorporated. 
+
+# original
+reactable(
+  relig_income,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE
+)
+
+# pivoted
+reactable(
+  relig_income %>%
+    pivot_longer(
+      cols = !religion,
+      names_to = "income",
+      values_to = "count"
+    ),
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE
+)
+```
+
+To reformat data from long to wide, we can use pivot_wider from the tidyr package, which is loaded by default when we run library(tidyverse). Wide data is basically useful for human legibility/interpretation and little else, so you'll primarily use pivot_longer(), but it is good to be familiar with anyway.
+
+Pivot wider requires:
+
+-   id_cols = an id column (if applicable),
+
+-   names_from = the field(s) you want to generate new column names from
+
+-   values_from = the columns you want the new column values to parse from
+
+```{r wide, echo=TRUE}
+
+weekdays <- c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+daily <- tibble(
+  day = factor(c("Tue", "Thu", "Fri", "Mon"), levels = weekdays),
+  value = c(2, 3, 1, 5)
+)
+
+daily %>%
+  pivot_wider(
+    names_from = day, 
+    values_from = value
+  )
+```
+
+To include missing levels, in this case, days, we can add "names_expand = TRUE" to force all factor levels to be represented.
+
+```{r wide2, echo=TRUE}
+
+daily %>% 
+  pivot_wider(
+    names_from = day, 
+    values_from = value, 
+    names_expand = TRUE
+  )
+```
